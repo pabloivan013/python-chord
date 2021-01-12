@@ -13,7 +13,7 @@ import threading, json, enum, time, logging, sys, ast
 
 class ChordNode(Node):
 
-    STABILIZATION_TIME = 3
+    STABILIZATION_TIME = 0.6
     REPLICATION_TIME   = 4
     CLEAR_CACHE_TIME   = 3
     
@@ -29,7 +29,6 @@ class ChordNode(Node):
         self.cache = Storage()
         self.server = TCPClientServer(self.host, self.port, self)
         self.server_started = False
-        self.sleep_time = 0.5
         
     def start(self):
         """
@@ -40,13 +39,13 @@ class ChordNode(Node):
         if server_status.success:
             self.server_started = True
             threading.Thread(target=self._run_function_thread, 
-                            args=(self.stabilize, self.sleep_time)).start()
+                            args=(self.stabilize, self.STABILIZATION_TIME)).start()
 
             threading.Thread(target=self._run_function_thread, 
-                            args=(self.fix_fingers, self.sleep_time)).start()
+                            args=(self.fix_fingers, self.STABILIZATION_TIME)).start()
 
             threading.Thread(target=self._run_function_thread, 
-                            args=(self.check_predecessor, self.sleep_time)).start()
+                            args=(self.check_predecessor, self.STABILIZATION_TIME)).start()
                         
             threading.Thread(target=self._run_function_thread, 
                             args=(self.replication, self.REPLICATION_TIME)).start()
@@ -88,23 +87,15 @@ class ChordNode(Node):
                 response.payload = vars(self.successor)
 
             elif (request_type == Type.GET_DATA):
-                logger.info("enter get_search")
                 data = self.get(key)
                 if not data:
-                    raise ValueError('GET_DATA: data not found')
+                    raise ValueError('GET_DATA: No get data Response')
                 response.payload = data
 
-                # if (data):
-                #     logger.info(f"DATA handle_message id: {self.id} - {data}")
-                #     response['success'] = True
-                #     response.payload = data
-
             elif (request_type == Type.GET_PREDECESSOR):
-                logger.info("enter get_predecessor")
                 response.payload = vars(self.predecessor) if self.predecessor else None
 
             elif (request_type == Type.NOTIFY):
-                logger.info("Enter notify")
                 self.notify(data)
 
             elif (request_type == Type.CHECK_STATUS):
@@ -112,6 +103,8 @@ class ChordNode(Node):
                 
             elif (request_type == Type.SET_DATA):
                 set_data = self._set_data(data)
+                if not set_data:
+                    raise ValueError('SET_DATA: No set data Response')
                 response.payload = set_data
 
             elif (request_type == Type.GET_KEYS):
@@ -122,10 +115,11 @@ class ChordNode(Node):
                 self._save_replicated_data(data, message.origen)
                 
             else:
-                raise TypeError(f"Type {Type} not found")
+                raise ValueError(f"Type {request_type} not found")
 
             response.success = True
             return json.dumps(vars(response))
+            
         except Exception as e:
             logger.exception(f"Error handle_message: {e}")
             response.success = False
@@ -371,7 +365,7 @@ class ChordNode(Node):
         
     def closest_precedent_node(self, k):
         for i in range(self.mbits-1, -1, -1):
-            if (self.finger_table[i] and self.interval(self.id, self.finger_table[i].id, k, False)): #Finger table not empty
+            if (self.finger_table[i] and self.interval(self.id, self.finger_table[i].id, k, False)):
                 return self.finger_table[i]
                         
         return self
@@ -388,9 +382,10 @@ class ChordNode(Node):
         Sends a request message to the successor node with his predecessor node id and his own id
         :return: True if the request has been successful, False otherwise
         """
-        MAX_TRY = 50
-        for i in range(MAX_TRY):
-            print(f"Node :{self.id} - Pred: {self.predecessor.id if self.predecessor else None} Asking for keys to successor node: {self.successor.id} - Try: {i+1}/{MAX_TRY}")
+        MAX_TRIES = 10
+        TRY_TIME = 1
+        for i in range(MAX_TRIES):
+            print(f"Node :{self.id} - Pred: {self.predecessor.id if self.predecessor else None} Asking for keys to successor node: {self.successor.id} - Try: {i+1}/{MAX_TRIES}")
             if (self.predecessor and (self.predecessor.id != self.id)):
                 keys = self.send_request(Type.GET_KEYS, self.id, self.successor,
                                         {"start": self.predecessor.id + 1, "end": self.id})
@@ -401,7 +396,7 @@ class ChordNode(Node):
                         
                 self.own_data.update_store_data(ast.literal_eval(keys))
                 return True    
-            time.sleep(self.sleep_time)
+            time.sleep(TRY_TIME)
         return False
 
     
@@ -424,7 +419,7 @@ class ChordNode(Node):
         except Exception as e:
             logger.exception(f" ERROR join")
         
-    #
+    
     def stabilize(self):
         """ 
         Verifies if his successor node has changed and proceed to update it
@@ -458,7 +453,7 @@ class ChordNode(Node):
             # Update predecessor
             self.predecessor = Node(n['id'], n['host'], n['port'])
                 
-    #
+    
     def fix_fingers(self):
         """ 
         Updates the fingers nodes with his actuals successors

@@ -4,7 +4,7 @@ import time
 
 class Client:
     
-    GET_SET_DATA_TRYS = 3
+    GET_SET_DATA_TRIES = 3
     GET_SET_WAIT_TIME = 1
     MBITS = 160
 
@@ -52,11 +52,11 @@ class Client:
         
 
     def get_set_data(self, type, node, key=None, data=None):
-        trys = self.GET_SET_DATA_TRYS
-        while trys > 0:
+        tries = self.GET_SET_DATA_TRIES
+        while tries > 0:
             get_response = self.chord_client.send_request(type, key, node, data)
             if get_response:
                 return get_response
             time.sleep(self.GET_SET_WAIT_TIME)
-            trys = trys - 1
+            tries = tries - 1
         

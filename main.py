@@ -11,8 +11,6 @@ class Command(str, enum.Enum):
 
 def hash_val(value):
     myhash = hashlib.sha1(value.encode())
-    print("hash hexdig: ",myhash.hexdigest())
-    print (int(myhash.hexdigest(), 16))
     return int(myhash.hexdigest(), 16)
 
 def usage():
