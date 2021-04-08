@@ -8,13 +8,60 @@ class Command(str, enum.Enum):
     JOIN    = 'JOIN'
     CREATE  = 'CREATE'
 
+class Flag(str, enum.Enum):
+    NODEHOST  = "-nh"
+    NODEPORT  = "-np"
+    PORT      = "-p"
+    KEY       = "-k"
+    VALUE     = "-v"
+    HELP      = "-h"
 
 def hash_val(value):
     myhash = hashlib.sha1(value.encode())
     return int(myhash.hexdigest(), 16)
 
+def createUsage():
+    return ("\nCOMMAND: CREATE [OPTIONS] \n" +
+            " Starts a new chord ring \n" +
+            " OPTIONS: \n" +
+            "   [-p] <PORT> The port where you will listening. Default 5000 \n"
+    )
+
+def joinUsage():
+    return ("\nCOMMAND: JOIN [OPTIONS] \n" +
+            " Joins to a chord node \n" +
+            " OPTIONS: \n" +
+            "  -nh <NODEHOST>   The node host to join \n" +
+            "  -np <NODEPORT>   The node port to join \n" +
+            "  [-p] <PORT>      The port where you will listening. Default 5000 \n"
+           )
+
+def getUsage():
+    return ("\nCOMMAND: GET [OPTIONS] \n" +
+            " Search the value of a given key in a chord node \n" +
+            " OPTIONS: \n" +
+            "  -nh <NODEHOST> The node host to perform the search \n" +
+            "  -np <NODEPORT> The node port to perform the search \n" +
+            "  -k <KEY>       The key to search \n"
+    )
+
+def setUsage():
+    return ("\nCOMMAND: SET [OPTIONS] \n" +
+            " Sets a key value pair in a specific node \n" +
+            " OPTIONS: \n" +
+            "  -nh <NODEHOST> The node host to set the key value \n" +
+            "  -np <NODEPORT> The node port to set the key value \n" +
+            "  -k <KEY>       The key to set \n" +
+            "  -v <VALUE>     The value to set \n" 
+    )
+
 def usage():
-    print("USAGE: <COMMAND> -FLAGS")
+    print("USAGE: <COMMAND> [OPTIONS] \n" +
+            createUsage(),
+            joinUsage(),
+            getUsage(),
+            setUsage()
+        )
 
 def create_node(host, port):
     if host and port:
@@ -36,7 +83,6 @@ def main():
     node_port   = None
     command     = None
 
-    print ('Number of arguments:', len(sys.argv), 'arguments.')
     argv = sys.argv
     argn = len(sys.argv) 
 
@@ -76,7 +122,6 @@ def main():
     #         f"node_port = {node_port} \n",
     #         f"command = {command}")
     
-    
     try:
         client_address = client_host +':'+ str(client_port)
         client_id = hash_val(client_address)
@@ -89,7 +134,7 @@ def main():
             if node:
                 client.join(node)
             else:
-                print("JOIN USAGE")
+                print(joinUsage())
         elif command == Command.GET:
             node = create_node(node_host, node_port)
             if node and key:
@@ -97,7 +142,7 @@ def main():
                 if response:
                     print("GET RESP: ", response)
             else:
-                print("GET USAGE")
+                print(getUsage())
         elif command == Command.SET:
             node = create_node(node_host, node_port)
             if node and key != None and value:
@@ -106,13 +151,14 @@ def main():
                 if response:
                     print("SET RESP: ", response)
             else:
-                print("SET USAGE")
+                print(setUsage())
         else:
-            print(f"Command: {command} not found")
+            print(f"COMMAND: {command} NOT FOUND \n")
+            usage()
+    
     except Exception as e :
         print("ERROR MAIN: ", e)
     
-
 
 if __name__ == '__main__':
     main()
