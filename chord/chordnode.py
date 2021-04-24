@@ -14,8 +14,8 @@ import threading, json, enum, time, logging, sys, ast
 class ChordNode(Node):
 
     STABILIZATION_TIME = 0.6
-    REPLICATION_TIME   = 4
-    CLEAR_CACHE_TIME   = 3
+    REPLICATION_TIME   = 3
+    CLEAR_CACHE_TIME   = 10
     
     def __init__(self, id, host, port, mbits):
         super().__init__(id, host, port)

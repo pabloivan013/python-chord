@@ -1,6 +1,7 @@
 from chord.chordnode import ChordNode
 from chord.chordnode import Type
 import time
+from utils.getsetresponse import GetSetResponse
 
 class Client:
     
@@ -54,9 +55,11 @@ class Client:
     def get_set_data(self, type, node, key=None, data=None):
         tries = self.GET_SET_DATA_TRIES
         while tries > 0:
-            get_response = self.chord_client.send_request(type, key, node, data)
-            if get_response:
-                return get_response
+            response = self.chord_client.send_request(type, key, node, data)
+            if response:
+                get_set_response = GetSetResponse()
+                get_set_response.update(response)
+                return get_set_response
             time.sleep(self.GET_SET_WAIT_TIME)
             tries = tries - 1
         
